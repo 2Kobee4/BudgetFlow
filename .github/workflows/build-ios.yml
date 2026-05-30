@@ -46,6 +46,14 @@ jobs:
           sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' src-tauri/gen/apple/budget-flow.xcodeproj/project.pbxproj
           sed -i '' 's/CODE_SIGN_STYLE = "Automatic";/CODE_SIGN_STYLE = Manual;/g' src-tauri/gen/apple/budget-flow.xcodeproj/project.pbxproj
 
+      - name: Symlink Build Tools for Xcode
+        run: |
+          sudo ln -sf $(which cargo) /usr/local/bin/cargo
+          sudo ln -sf $(which rustc) /usr/local/bin/rustc
+          sudo ln -sf $(which node) /usr/local/bin/node
+          sudo ln -sf $(which npm) /usr/local/bin/npm
+          sudo ln -sf $(which npx) /usr/local/bin/npx
+
       - name: Build iOS Application (Unsigned Physical Device Build)
         run: |
           xcodebuild \
