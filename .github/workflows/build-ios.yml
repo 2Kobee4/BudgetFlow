@@ -38,7 +38,7 @@ jobs:
 
       - name: Build iOS Application (Simulator target, unsigned)
         run: |
-          npx tauri ios build --target aarch64-apple-ios-sim
+          npx tauri ios build --target aarch64-sim
           # This compiles the Rust core for the iOS simulator and creates the Xcode build outputs.
 
       - name: Compress Build Artifacts
