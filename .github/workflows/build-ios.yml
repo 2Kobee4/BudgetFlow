@@ -47,17 +47,19 @@ jobs:
           sed -i '' 's/CODE_SIGN_STYLE = "Automatic";/CODE_SIGN_STYLE = Manual;/g' src-tauri/gen/apple/budget-flow.xcodeproj/project.pbxproj
 
       - name: Build iOS Application (Unsigned Physical Device Build)
-        env:
-          APPLE_DEVELOPMENT_TEAM: "1234567890"
-          CODE_SIGNING_ALLOWED: "NO"
-          CODE_SIGNING_REQUIRED: "NO"
-          CODE_SIGN_IDENTITY: ""
-          CODE_SIGN_STYLE: "Manual"
-          PROVISIONING_PROFILE_SPECIFIER: ""
-          CODE_SIGN_ENTITLEMENTS: ""
         run: |
-          ./node_modules/.bin/tauri ios build --target aarch64 -- CODE_SIGNING_ALLOWED="NO" CODE_SIGNING_REQUIRED="NO" CODE_SIGN_IDENTITY="" CODE_SIGN_STYLE="Manual" PROVISIONING_PROFILE_SPECIFIER="" CODE_SIGN_ENTITLEMENTS=" "
-          # This compiles the Rust core for physical iOS devices (arm64) and builds the Xcode project without code signing.
+          xcodebuild \
+            -scheme "budget-flow_iOS" \
+            -workspace src-tauri/gen/apple/budget-flow.xcodeproj/project.xcworkspace \
+            -sdk iphoneos \
+            -configuration release \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_STYLE="Manual" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            CODE_SIGN_ENTITLEMENTS=""
+          # This compiles the Rust core and packages the iOS application directly via Xcode without provisioning checks.
 
       - name: Package Build Artifacts
         run: |
