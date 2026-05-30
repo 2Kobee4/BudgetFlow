@@ -34,7 +34,7 @@ jobs:
         run: npm run build
 
       - name: Initialize Tauri iOS Project
-        run: npx tauri ios init --no-interactive
+        run: npx tauri ios init
 
       - name: Build iOS Application (Simulator target, unsigned)
         run: |
