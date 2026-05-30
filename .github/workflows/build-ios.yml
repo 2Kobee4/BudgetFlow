@@ -9,8 +9,8 @@ on:
 
 jobs:
   build:
-    name: Build iOS App (Unsigned)
-    runs-on: macos-14
+    name: Build iOS App (Unsigned Device Build)
+    runs-on: macos-15
 
     steps:
       - name: Checkout repository
@@ -25,7 +25,12 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-ios, aarch64-apple-ios-sim
+          targets: aarch64-apple-ios
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
 
       - name: Install npm dependencies
         run: npm ci
@@ -36,20 +41,21 @@ jobs:
       - name: Initialize Tauri iOS Project
         run: npx tauri ios init
 
-      - name: Build iOS Application (Simulator target, unsigned)
+      - name: Build iOS Application (Unsigned Physical Device Build)
         run: |
-          npx tauri ios build --target aarch64-sim
-          # This compiles the Rust core for the iOS simulator and creates the Xcode build outputs.
+          npx tauri ios build --target aarch64 -- CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+          # This compiles the Rust core for physical iOS devices (arm64) and builds the Xcode project without code signing.
 
-      - name: Compress Build Artifacts
+      - name: Package Build Artifacts
         run: |
           mkdir -p build-output
-          cp -r src-tauri/gen/apple/build/Build/Products/Debug-iphonesimulator/BudgetFlow.app build-output/ || true
+          # Dynamically locate the built .app folder (Release-iphoneos) and copy it
+          find src-tauri/gen/apple/build -name "*.app" -type d -exec cp -r {} build-output/ \;
           tar -czf budgetflow-ios.tar.gz -C build-output .
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: budgetflow-ios-simulator
+          name: budgetflow-ios-device
           path: budgetflow-ios.tar.gz
-          if-no-files-found: warn
+          if-no-files-found: error
