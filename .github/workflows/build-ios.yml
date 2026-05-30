@@ -56,6 +56,7 @@ jobs:
 
       - name: Build iOS Application (Unsigned Physical Device Build)
         run: |
+          set -o pipefail
           xcodebuild \
             -scheme "budget-flow_iOS" \
             -workspace src-tauri/gen/apple/budget-flow.xcodeproj/project.xcworkspace \
@@ -68,8 +69,22 @@ jobs:
             CODE_SIGN_STYLE="Manual" \
             PROVISIONING_PROFILE_SPECIFIER="" \
             DEVELOPMENT_TEAM="" \
-            CODE_SIGN_ENTITLEMENTS="" > xcodebuild.log 2>&1 || { echo "=== XCODEBUILD FAILED ==="; cat xcodebuild.log | grep -A 8 -B 3 -i "error" || tail -n 100 xcodebuild.log; exit 1; }
-          # This compiles the Rust core and packages the iOS application directly via Xcode without provisioning checks.
+            CODE_SIGN_ENTITLEMENTS="" > xcodebuild.log 2>&1 || { 
+              echo "=== XCODEBUILD FAILED ==="
+              echo "Compiler errors:"
+              grep -i "^error:" xcodebuild.log || echo "No explicit 'error:' lines found."
+              echo "--- Last 50 lines of log ---"
+              tail -n 50 xcodebuild.log
+              exit 1
+            }
+
+      - name: Upload xcodebuild log (always, even on failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: xcodebuild.log
+          if-no-files-found: warn
 
       - name: Package Build Artifacts
         run: |
