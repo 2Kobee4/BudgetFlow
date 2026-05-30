@@ -41,44 +41,53 @@ jobs:
       - name: Initialize Tauri iOS Project
         run: |
           npx tauri ios init
-          # Force Manual signing style in Xcode project file to prevent Xcode from checking provisioning profiles
+          # Verify generated Xcode project structure
+          echo "=== Generated Xcode project structure ==="
+          find src-tauri/gen/apple -type f | sort
+          # Force Manual signing in project file to skip provisioning profile checks
           sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' src-tauri/gen/apple/budget-flow.xcodeproj/project.pbxproj
           sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' src-tauri/gen/apple/budget-flow.xcodeproj/project.pbxproj
           sed -i '' 's/CODE_SIGN_STYLE = "Automatic";/CODE_SIGN_STYLE = Manual;/g' src-tauri/gen/apple/budget-flow.xcodeproj/project.pbxproj
+          echo "=== Signing settings after sed ==="
+          grep -E "CODE_SIGN_STYLE|ProvisioningStyle" src-tauri/gen/apple/budget-flow.xcodeproj/project.pbxproj
 
-      - name: Symlink Build Tools for Xcode
+      - name: Symlink build tools for Xcode sandbox
         run: |
-          sudo ln -sf $(which cargo) /usr/local/bin/cargo
-          sudo ln -sf $(which rustc) /usr/local/bin/rustc
-          sudo ln -sf $(which node) /usr/local/bin/node
-          sudo ln -sf $(which npm) /usr/local/bin/npm
-          sudo ln -sf $(which npx) /usr/local/bin/npx
+          sudo ln -sf "$(which cargo)" /usr/local/bin/cargo
+          sudo ln -sf "$(which rustc)" /usr/local/bin/rustc
+          sudo ln -sf "$(which node)" /usr/local/bin/node
+          sudo ln -sf "$(which npm)" /usr/local/bin/npm
+          sudo ln -sf "$(which npx)" /usr/local/bin/npx
 
-      - name: Build iOS Application (Unsigned Physical Device Build)
+      - name: Build iOS Application (unsigned)
         run: |
-          set -o pipefail
           xcodebuild \
             -scheme "budget-flow_iOS" \
             -workspace src-tauri/gen/apple/budget-flow.xcodeproj/project.xcworkspace \
             -sdk iphoneos \
             -configuration release \
-            SYMROOT="${{ github.workspace }}/src-tauri/gen/apple/build" \
+            SYMROOT="${GITHUB_WORKSPACE}/src-tauri/gen/apple/build" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_STYLE="Manual" \
+            CODE_SIGN_STYLE=Manual \
             PROVISIONING_PROFILE_SPECIFIER="" \
             DEVELOPMENT_TEAM="" \
-            CODE_SIGN_ENTITLEMENTS="" > xcodebuild.log 2>&1 || { 
-              echo "=== XCODEBUILD FAILED ==="
-              echo "Compiler errors:"
-              grep -i "^error:" xcodebuild.log || echo "No explicit 'error:' lines found."
-              echo "--- Last 50 lines of log ---"
-              tail -n 50 xcodebuild.log
-              exit 1
-            }
+            CODE_SIGN_ENTITLEMENTS="" \
+            2>&1 | tee xcodebuild.log
+          # Check if build succeeded
+          if grep -q "\*\* BUILD FAILED \*\*" xcodebuild.log; then
+            echo "=== BUILD FAILED ==="
+            echo "--- Script phase errors ---"
+            grep -A 20 "PhaseScriptExecution" xcodebuild.log | head -50 || true
+            echo "--- All error lines ---"
+            grep -E "^error:|^.+error:" xcodebuild.log | grep -v "export\|_ERROR" || true
+            echo "--- Last 80 lines ---"
+            tail -n 80 xcodebuild.log
+            exit 1
+          fi
 
-      - name: Upload xcodebuild log (always, even on failure)
+      - name: Upload xcodebuild log (always)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -89,11 +98,12 @@ jobs:
       - name: Package Build Artifacts
         run: |
           mkdir -p build-output
-          # Dynamically locate the built .app folder (Release-iphoneos) and copy it
+          echo "=== Searching for built .app ==="
+          find . -name "*.app" -type d 2>/dev/null | grep -v node_modules | sort
           find src-tauri/gen/apple/build -name "*.app" -type d -exec cp -r {} build-output/ \;
           tar -czf budgetflow-ios.tar.gz -C build-output .
 
-      - name: Upload Artifact
+      - name: Upload iOS App Artifact
         uses: actions/upload-artifact@v4
         with:
           name: budgetflow-ios-device
