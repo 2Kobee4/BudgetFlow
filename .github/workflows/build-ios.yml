@@ -30,7 +30,7 @@ jobs:
       - name: Rust Cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri -> target
+          workspaces: src-tauri
 
       - name: Install npm dependencies
         run: npm ci
@@ -61,12 +61,14 @@ jobs:
             -workspace src-tauri/gen/apple/budget-flow.xcodeproj/project.xcworkspace \
             -sdk iphoneos \
             -configuration release \
+            SYMROOT="${{ github.workspace }}/src-tauri/gen/apple/build" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_STYLE="Manual" \
             PROVISIONING_PROFILE_SPECIFIER="" \
-            CODE_SIGN_ENTITLEMENTS=""
+            DEVELOPMENT_TEAM="" \
+            CODE_SIGN_ENTITLEMENTS="" > xcodebuild.log 2>&1 || { echo "=== XCODEBUILD FAILED ==="; cat xcodebuild.log | grep -A 8 -B 3 -i "error" || tail -n 100 xcodebuild.log; exit 1; }
           # This compiles the Rust core and packages the iOS application directly via Xcode without provisioning checks.
 
       - name: Package Build Artifacts
