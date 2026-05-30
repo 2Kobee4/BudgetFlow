@@ -43,6 +43,8 @@ jobs:
           npx tauri ios init
           # Force Manual signing style in Xcode project file to prevent Xcode from checking provisioning profiles
           sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' src-tauri/gen/apple/budget-flow.xcodeproj/project.pbxproj
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' src-tauri/gen/apple/budget-flow.xcodeproj/project.pbxproj
+          sed -i '' 's/CODE_SIGN_STYLE = "Automatic";/CODE_SIGN_STYLE = Manual;/g' src-tauri/gen/apple/budget-flow.xcodeproj/project.pbxproj
 
       - name: Build iOS Application (Unsigned Physical Device Build)
         env:
