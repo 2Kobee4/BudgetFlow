@@ -39,14 +39,17 @@ jobs:
         run: npm run build
 
       - name: Initialize Tauri iOS Project
-        run: npx tauri ios init
+        run: |
+          npx tauri ios init
+          # Force Manual signing style in Xcode project file to prevent Xcode from checking provisioning profiles
+          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' src-tauri/gen/apple/budget-flow.xcodeproj/project.pbxproj
 
       - name: Build iOS Application (Unsigned Physical Device Build)
         env:
           APPLE_DEVELOPMENT_TEAM: "1234567890"
         run: |
-          npx tauri ios build --target aarch64 -- CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO CODE_SIGN_STYLE="Manual" PROVISIONING_PROFILE_SPECIFIER=""
-          # This compiles the Rust core for physical iOS devices (arm64) and builds the Xcode project without code signing.
+          npx tauri ios build --target aarch64 -- CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES CODE_SIGN_STYLE="Manual" PROVISIONING_PROFILE_SPECIFIER="" CODE_SIGN_ENTITLEMENTS=""
+          # This compiles the Rust core for physical iOS devices (arm64) and builds the Xcode project using ad-hoc signing.
 
       - name: Package Build Artifacts
         run: |
